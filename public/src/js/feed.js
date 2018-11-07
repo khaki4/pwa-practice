@@ -42,6 +42,11 @@ const onSaveButtonClicked = (event) => {
   }
 };
 
+const clearCard = () => {
+  while (sharedMomentsArea.hasChildNodes()) {
+    sharedMomentsArea.removeChild(sharedMomentsArea.lastChild);
+  }
+};
 
 function createCard() {
   var cardWrapper = document.createElement('div');
@@ -70,10 +75,32 @@ function createCard() {
   sharedMomentsArea.appendChild(cardWrapper);
 }
 
-fetch('https://httpbin.org/get')
+const url = 'https://httpbin.org/get';
+let networkDataReceived = false;
+fetch(url)
   .then(function(res) {
     return res.json();
   })
   .then(function(data) {
+    networkDataReceived = true;
+    console.log('From web', data);
+    clearCard();
     createCard();
   });
+
+if ('caches' in window) {
+  caches.match(url)
+    .then((response) => {
+      if (response) {
+        return response.json();
+      }
+    })
+    .then((data) => {
+      console.log('From cache', data);
+      if (!networkDataReceived) {
+        clearCard();
+        createCard();
+      }
+    })
+
+}
