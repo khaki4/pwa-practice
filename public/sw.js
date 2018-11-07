@@ -45,6 +45,11 @@ self.addEventListener('activate', function(event) {
   return self.clients.claim();
 });
 
+const isInArray = (string, array) => {
+  return array.some(item => item === string);
+};
+
+
 // Cache then Network
 self.addEventListener('fetch', function(event) {
   const url = 'https://httpbin.org/get';
@@ -60,7 +65,7 @@ self.addEventListener('fetch', function(event) {
             });
         })
     );
-  } else if (new RegExp('\\b' + STATIC_FILES.join('\\b | \\b') + '\\b').test(event.request.url)) {
+  } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(
       caches.match(event.request)
     );
