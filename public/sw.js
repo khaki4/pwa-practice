@@ -44,6 +44,21 @@ self.addEventListener('activate', function(event) {
   return self.clients.claim();
 });
 
+// Cache then Network
+self.addEventListener('fetch', function(event) {
+  event.respondWith(
+    caches.open(CACHE_DYNAMIC_NAME)
+      .then((cache) => {
+        return fetch(event.request)
+          .then((res) => {
+            cache.put(event.request, res.clone());
+            return res;
+          });
+      })
+  );
+});
+
+// Cache then Network
 // self.addEventListener('fetch', function(event) {
 //   event.respondWith(
 //     caches.match(event.request)
@@ -85,19 +100,19 @@ self.addEventListener('activate', function(event) {
 // });
 
 // Network first and Cache
-self.addEventListener('fetch', function(event) {
-  event.respondWith(
-    fetch(event.request)
-      .then(res => {
-        return caches.open(CACHE_DYNAMIC_NAME)
-          .then((cache) => {
-            cache.put(event.request.url, res.clone());
-            return res;
-          });
-      })
-      .catch((err) => {
-        return caches.match(event.request);
-      })
-
-  );
-});
+// self.addEventListener('fetch', function(event) {
+//   event.respondWith(
+//     fetch(event.request)
+//       .then(res => {
+//         return caches.open(CACHE_DYNAMIC_NAME)
+//           .then((cache) => {
+//             cache.put(event.request.url, res.clone());
+//             return res;
+//           });
+//       })
+//       .catch((err) => {
+//         return caches.match(event.request);
+//       })
+//
+//   );
+// });
