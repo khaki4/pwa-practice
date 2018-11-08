@@ -8,7 +8,9 @@
   top: 56px;
   background: white;
   text-align: center;
-  display: none;
+  /*display: none;*/
+  transform: translateY(100vh);
+  transition: transform .3s;
 }
 
 .main-image {
@@ -32,4 +34,23 @@
 
 .shared-moment-card.mdl-card {
   margin: 10px auto;
+  /*width: 270px;*/
+  width: 80%;
 }
+
+.shared-moment-card .mld-card__title {
+  height: 120px;
+}
+
+@media (min-height: 600px) {
+  .shared-moment-card .mld-card__title {
+    height: 160px;
+  }
+}
+
+@media (min-height: 1000px) {
+  .shared-moment-card.mdl-card {
+    height: 200px;
+  }
+}
+
