@@ -1,14 +1,15 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
 
-var CACHE_STATIC_NAME = 'static-v21';
+var CACHE_STATIC_NAME = 'static-v23';
 var CACHE_DYNAMIC_NAME = 'dynamic-v2';
-const STATIC_FILES = [
+var STATIC_FILES = [
   '/',
   '/index.html',
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/idb.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
   '/src/js/material.min.js',
@@ -33,23 +34,23 @@ const STATIC_FILES = [
 //     })
 // }
 
-self.addEventListener('install', function(event) {
+self.addEventListener('install', function (event) {
   console.log('[Service Worker] Installing Service Worker ...', event);
   event.waitUntil(
     caches.open(CACHE_STATIC_NAME)
-      .then(function(cache) {
+      .then(function (cache) {
         console.log('[Service Worker] Precaching App Shell');
         cache.addAll(STATIC_FILES);
       })
   )
 });
 
-self.addEventListener('activate', function(event) {
+self.addEventListener('activate', function (event) {
   console.log('[Service Worker] Activating Service Worker ....', event);
   event.waitUntil(
     caches.keys()
-      .then(function(keyList) {
-        return Promise.all(keyList.map(function(key) {
+      .then(function (keyList) {
+        return Promise.all(keyList.map(function (key) {
           if (key !== CACHE_STATIC_NAME && key !== CACHE_DYNAMIC_NAME) {
             console.log('[Service Worker] Removing old cache.', key);
             return caches.delete(key);
@@ -60,33 +61,35 @@ self.addEventListener('activate', function(event) {
   return self.clients.claim();
 });
 
-const isInArray = (string, array) => {
-  return array.some(item => item === string);
-};
+function isInArray(string, array) {
+  var cachePath;
+  if (string.indexOf(self.origin) === 0) { // request targets domain where we serve the page from (i.e. NOT a CDN)
+    console.log('matched ', string);
+    cachePath = string.substring(self.origin.length); // take the part of the URL AFTER the domain (e.g. after localhost:8080)
+  } else {
+    cachePath = string; // store the full request (for CDNs)
+  }
+  return array.indexOf(cachePath) > -1;
+}
 
+self.addEventListener('fetch', function (event) {
 
-// Cache then Network
-self.addEventListener('fetch', function(event) {
-  const url = 'https://pwagram-4062a.firebaseio.com/posts';
+  var url = 'https://pwagram-4062a.firebaseio.com/posts';
   if (event.request.url.indexOf(url) > -1) {
-    event.respondWith(
-      fetch(event.request)
-        .then((res) => {
-          const clonedRes = res.clone();
-          clearAllData('posts')
-            .then(() => {
-              return clonedRes.json()
-            })
-            .then((data) => {
-              for (const [key, value] of Object.entries(data)) {
-                writeData('posts', value)
-                  .then(() => {
-                    deleteItemFromData('posts', key);
-                  });
-              }
-            });
-          return res;
-        })
+    event.respondWith(fetch(event.request)
+      .then(function (res) {
+        var clonedRes = res.clone();
+        clearAllData('posts')
+          .then(function () {
+            return clonedRes.json();
+          })
+          .then(function (data) {
+            for (var key in data) {
+              writeData('posts', data[key])
+            }
+          });
+        return res;
+      })
     );
   } else if (isInArray(event.request.url, STATIC_FILES)) {
     event.respondWith(
@@ -95,25 +98,26 @@ self.addEventListener('fetch', function(event) {
   } else {
     event.respondWith(
       caches.match(event.request)
-        .then(function(response) {
+        .then(function (response) {
           if (response) {
             return response;
           } else {
             return fetch(event.request)
-              .then(function(res) {
+              .then(function (res) {
                 return caches.open(CACHE_DYNAMIC_NAME)
-                  .then(function(cache) {
+                  .then(function (cache) {
+                    // trimCache(CACHE_DYNAMIC_NAME, 3);
                     cache.put(event.request.url, res.clone());
                     return res;
                   })
               })
-              .catch(function(err) {
+              .catch(function (err) {
                 return caches.open(CACHE_STATIC_NAME)
-                  .then(cache => {
+                  .then(function (cache) {
                     if (event.request.headers.get('accept').includes('text/html')) {
-                      return cache.match('./offline.html');
+                      return cache.match('/offline.html');
                     }
-                  })
+                  });
               });
           }
         })
@@ -121,7 +125,6 @@ self.addEventListener('fetch', function(event) {
   }
 });
 
-// Cache then Network
 // self.addEventListener('fetch', function(event) {
 //   event.respondWith(
 //     caches.match(event.request)
@@ -139,43 +142,78 @@ self.addEventListener('fetch', function(event) {
 //             })
 //             .catch(function(err) {
 //               return caches.open(CACHE_STATIC_NAME)
-//                 .then(cache => {
-//                   return cache.match('./offline.html');
-//                 })
+//                 .then(function(cache) {
+//                   return cache.match('/offline.html');
+//                 });
 //             });
 //         }
 //       })
 //   );
 // });
 
-// Cache-only
 // self.addEventListener('fetch', function(event) {
+//   event.respondWith(
+//     fetch(event.request)
+//       .then(function(res) {
+//         return caches.open(CACHE_DYNAMIC_NAME)
+//                 .then(function(cache) {
+//                   cache.put(event.request.url, res.clone());
+//                   return res;
+//                 })
+//       })
+//       .catch(function(err) {
+//         return caches.match(event.request);
+//       })
+//   );
+// });
+
+// Cache-only
+// self.addEventListener('fetch', function (event) {
 //   event.respondWith(
 //     caches.match(event.request)
 //   );
 // });
 
 // Network-only
-// self.addEventListener('fetch', (event) => {
+// self.addEventListener('fetch', function (event) {
 //   event.respondWith(
 //     fetch(event.request)
 //   );
 // });
 
-// Network first and Cache
-// self.addEventListener('fetch', function(event) {
-//   event.respondWith(
-//     fetch(event.request)
-//       .then(res => {
-//         return caches.open(CACHE_DYNAMIC_NAME)
-//           .then((cache) => {
-//             cache.put(event.request.url, res.clone());
-//             return res;
-//           });
-//       })
-//       .catch((err) => {
-//         return caches.match(event.request);
-//       })
-//
-//   );
-// });
+self.addEventListener('sync', function(event) {
+  console.log('[Service Worker] Background syncing', event);
+  if (event.tag === 'sync-new-posts') {
+    console.log('[Service Worker] Syncing new Posts');
+    event.waitUntil(
+      readAllData('sync-posts')
+        .then(function(data) {
+          for (var dt of data) {
+            fetch('https://pwagram-4062a.firebaseio.com/posts.json', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({
+                id: dt.id,
+                title: dt.title,
+                location: dt.location,
+                image: 'https://firebasestorage.googleapis.com/v0/b/pwagram-4062a.appspot.com/o/sf-boat.jpg?alt=media&token=0bbdd12a-6cc7-4f5a-a62b-f6c84b051cd2'
+              })
+            })
+              .then(function(res) {
+                console.log('Sent data', res);
+                if (res.ok) {
+                  deleteItemFromData('sync-posts', dt.id); // Isn't working correctly!
+                }
+              })
+              .catch(function(err) {
+                console.log('Error while sending data', err);
+              });
+          }
+
+        })
+    );
+  }
+});
