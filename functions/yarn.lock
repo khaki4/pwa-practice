@@ -3693,7 +3693,7 @@ verror@1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
-web-push@^3.3.3:
+web-push@3.3.3:
   version "3.3.3"
   resolved "https://registry.yarnpkg.com/web-push/-/web-push-3.3.3.tgz#8dc7c578dd1243ceb5a8377389424e87ea9b15cc"
   integrity sha512-Om4CNZpyzHP3AtGZpbBavCO7I9oCS9CFY2VDfTj/cFx2gm+mAtyK2OlKd6qu9pwCdZTyYanUiyhT0JSrs0ypHQ==
